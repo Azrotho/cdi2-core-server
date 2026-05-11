@@ -2,6 +2,12 @@
   "name": "cdi2-core-server",
   "version": "1.0.0",
   "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node src/index.js",
+    "dev": "npx tsx --watch src/index.ts",
+    "format": "prettier --write ."
+  },
   "dependencies": {
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
