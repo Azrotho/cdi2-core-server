@@ -2,7 +2,7 @@ import dotenv from "dotenv";
 import express from "express";
 import mysql, { type RowDataPacket } from "mysql2/promise";
 
-dotenv.config({quiet: true});
+dotenv.config({ quiet: true });
 
 const server = express();
 
@@ -50,18 +50,21 @@ server.post("/teams", express.json(), async (req, res) => {
     const token = req.headers["authorization"];
 
     if (!token) return res.status(401).send({ error: "No token provided" });
-    if (!await isAdminToken(token)) return res.status(403).send({ error: "Unauthorized" });
+    if (!(await isAdminToken(token))) return res.status(403).send({ error: "Unauthorized" });
     if (!name || !tag || !color || !leader) return res.status(400).send({ error: "Missing required fields" });
 
     try {
-        await database.query("INSERT INTO team (name, tag, color, leader) VALUES (?, ?, ?, ?)", [name, tag, color, leader]);
+        await database.query("INSERT INTO team (name, tag, color, leader) VALUES (?, ?, ?, ?)", [
+            name,
+            tag,
+            color,
+            leader
+        ]);
         res.send({ message: "Team created successfully" });
     } catch (err) {
         console.error(err);
         res.status(500).send({ error: "Failed to create team" });
     }
-
-
 });
 
 server.listen(3000, () => {
