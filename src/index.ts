@@ -32,6 +32,10 @@ server.get("/ping", (req, res) => {
     res.send({ message: "pong!" });
 });
 
+server.get("/quoi", (req, res) => {
+    res.send({ message: "feur"})
+});
+
 server.get("/test-token", async (req, res) => {
     const token = req.headers["authorization"];
     if (!token) return res.status(401).send({ error: "No token provided" });
