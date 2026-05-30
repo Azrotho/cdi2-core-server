@@ -58,7 +58,7 @@ server.post("/teams", express.json(), async (req, res) => {
     if (!name || !tag || !color || !leader) return res.status(400).send({ error: "Missing required fields" });
 
     try {
-        await database.query("INSERT INTO team (name, tag, color, leader) VALUES (?, ?, ?, ?)", [
+        await database.query("INSERT INTO team (name, tag, color, leader, staff) VALUES (?, ?, ?, ?, 0)", [
             name,
             tag,
             color,
@@ -169,7 +169,8 @@ server.post("/verify", express.json(), async (req, res) => {
     if (!token) return res.status(400).send({ error: "No token provided" });
 
     const uuid = req.body?.uuid;
-    if (!uuid) return res.status(400).send({ error: "No uuid provided" });
+    const playerName = req.body?.player_name;
+    if (!uuid || !playerName) return res.status(400).send({ error: "No uuid or player_name provided" });
 
     const owner = await getTokenOwner(token);
     if (!owner) return res.status(401).send({ error: "Invalid token" });
@@ -200,8 +201,8 @@ server.post("/verify", express.json(), async (req, res) => {
             const expiration = Date.now() + 10 * 60 * 1000;
 
             await database.query(
-                "INSERT INTO verification (uuid, code, expiration) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE code = VALUES(code), expiration = VALUES(expiration)",
-                [uuid, verificationCode, expiration]
+                "INSERT INTO verification (uuid, player_name, code, expiration) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE player_name = VALUES(player_name), code = VALUES(code), expiration = VALUES(expiration)",
+                [uuid, playerName, verificationCode, expiration]
             );
 
             return res.send({ message: "OK", code: verificationCode });
@@ -231,7 +232,7 @@ server.post("/verify/check", express.json(), async (req, res) => {
 
     try {
         const [rows] = await database.query<RowDataPacket[]>(
-            "SELECT code, expiration FROM verification WHERE uuid = ?",
+            "SELECT code, expiration, player_name FROM verification WHERE uuid = ?",
             [uuid]
         );
         const row = rows[0];
@@ -258,8 +259,8 @@ server.post("/verify/check", express.json(), async (req, res) => {
         }
 
         await database.query(
-            "INSERT INTO player (uuid, name, discord_id, team) VALUES (?, ?, ?, ?)",
-            [uuid, uuid, discordId, "none"]
+            "INSERT INTO player (uuid, name, discord_id, team) VALUES (?, ?, ?, -1)",
+            [uuid, row.player_name, discordId]
         );
 
         await database.query("DELETE FROM verification WHERE uuid = ?", [uuid]);
