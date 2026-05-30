@@ -81,6 +81,64 @@ function pass(length: number = 8): string {
     return password;
 }
 
+
+server.get("/player/:uuid", async (req, res) => {
+    const uuid = req.params.uuid;
+    const token = req.headers["authorization"];
+
+    if (!token) return res.status(401).send({ error: "No token provided" });
+    const owner = await getTokenOwner(token);
+    if (!owner) return res.status(401).send({ error: "Invalid token" });
+    if(owner !== "admin" && owner !== uuid) return res.status(403).send({ error: "Unauthorized" });
+    
+    try {
+        const [rows] = await database.query<RowDataPacket[]>("SELECT uuid, name, discord_id, team FROM player WHERE uuid = ?", [uuid]);
+        const player = rows[0];
+        if (!player) {
+            return res.status(404).send({ error: "Player not found" });
+        }
+        res.send({ player });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send({ error: "Internal server error" });
+    }
+});
+
+server.delete("/player/:uuid", async (req, res) => {
+    const uuid = req.params.uuid;
+    const token = req.headers["authorization"];
+
+    if (!token) return res.status(401).send({ error: "No token provided" });
+    const owner = await getTokenOwner(token);
+    if (!owner) return res.status(401).send({ error: "Invalid token" });
+    if(owner !== "admin") return res.status(403).send({ error: "Unauthorized" });
+
+    try {
+        await database.query("DELETE FROM player WHERE uuid = ?", [uuid]);
+        res.send({ message: "Player deleted successfully" });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send({ error: "Internal server error" });
+    }
+});
+
+server.get("/players", async (req, res) => {
+    const token = req.headers["authorization"];
+
+    if (!token) return res.status(401).send({ error: "No token provided" });
+    const owner = await getTokenOwner(token);
+    if (!owner) return res.status(401).send({ error: "Invalid token" });
+    if(owner !== "admin") return res.status(403).send({ error: "Unauthorized" });
+
+    try {
+        const [rows] = await database.query<RowDataPacket[]>("SELECT uuid, name, discord_id, team FROM player");
+        res.send({ players: rows });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send({ error: "Internal server error" });
+    }
+});
+
 /**
  * Endpoint pour envoyer un une demande de vérification d'un joueur, renvoie le code de vérification à envoyer au joueur en jeu
  */
