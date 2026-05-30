@@ -96,6 +96,15 @@ server.post("/verify", express.json(), async (req, res) => {
 
     if (owner === "admin") {
         try {
+            // Bloquer si le joueur existe déjà (déjà vérifié)
+            const [existing] = await database.query<RowDataPacket[]>(
+                "SELECT 1 FROM player WHERE uuid = ?",
+                [uuid]
+            );
+            if (existing.length > 0) {
+                return res.status(409).send({ error: "Player already verified" });
+            }
+
             const [rows] = await database.query<RowDataPacket[]>(
                 "SELECT code, expiration FROM verification WHERE uuid = ?",
                 [uuid]
@@ -124,6 +133,66 @@ server.post("/verify", express.json(), async (req, res) => {
         res.status(403).send({ error: "Unauthorized" });
     }
 });
+
+server.post("/verify/check", express.json(), async (req, res) => {
+    const uuid = req.body?.uuid;
+    const code = req.body?.code;
+    const discordId = req.body?.discordId;
+    const token = req.headers["authorization"];
+
+    if (!token) return res.status(400).send({ error: "No token provided" });
+    const owner = await getTokenOwner(token);
+    if (!owner) return res.status(401).send({ error: "Invalid token" });
+    if(owner !== "admin") return res.status(403).send({ error: "Unauthorized" });
+
+    if (!uuid || !code || !discordId) {
+        return res.status(400).send({ error: "Missing required fields" });
+    }
+
+    try {
+        const [rows] = await database.query<RowDataPacket[]>(
+            "SELECT code, expiration FROM verification WHERE uuid = ?",
+            [uuid]
+        );
+        const row = rows[0];
+        if (!row) {
+            return res.status(404).send({ error: "Verification not found" });
+        }
+
+        if (row.code !== code) {
+            return res.status(400).send({ error: "Invalid code" });
+        }
+
+        if (row.expiration < Date.now()) {
+            await database.query("DELETE FROM verification WHERE uuid = ?", [uuid]);
+            return res.status(400).send({ error: "Code expired" });
+        }
+
+        // Vérifier si le joueur est déjà vérifié
+        const [existing] = await database.query<RowDataPacket[]>(
+            "SELECT discord_id FROM player WHERE uuid = ?",
+            [uuid]
+        );
+        if (existing[0]?.discord_id) {
+            return res.status(409).send({ error: "Player already verified" });
+        }
+
+        await database.query(
+            "INSERT INTO player (uuid, name, discord_id, team) VALUES (?, ?, ?, ?)",
+            [uuid, uuid, discordId, "none"]
+        );
+
+        await database.query("DELETE FROM verification WHERE uuid = ?", [uuid]);
+
+        return res.send({ message: "Player verified successfully" });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).send({ error: "Internal server error" });
+    }
+})
+
+
+
 
 server.listen(3000, () => {
     console.log("Server is running on port 3000");
