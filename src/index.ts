@@ -287,7 +287,7 @@ server.post("/verify", express.json(), async (req, res) => {
 });
 
 server.post("/verify/check", express.json(), async (req, res) => {
-    const uuid = req.body?.uuid;
+    let uuid = req.body?.uuid;
     const code = req.body?.code;
     const discordId = req.body?.discordId;
     const token = req.headers["authorization"];
@@ -297,11 +297,31 @@ server.post("/verify/check", express.json(), async (req, res) => {
     if (!owner) return res.status(401).send({ error: "Invalid token" });
     if(owner !== "admin") return res.status(403).send({ error: "Unauthorized" });
 
-    if (!uuid || !code || !discordId) {
+    if (!code || !discordId) {
         return res.status(400).send({ error: "Missing required fields" });
     }
 
+    if (!uuid) {
+        const [codeRows] = await database.query<RowDataPacket[]>(
+            "SELECT uuid FROM verification WHERE code = ?",
+            [code]
+        );
+        if (!codeRows[0]?.uuid) {
+            return res.status(404).send({ error: "Code not found" });
+        }
+        uuid = codeRows[0].uuid;
+    }
+
     try {
+        // Vérifier que le compte Discord n'est pas déjà lié
+        const [discordExisting] = await database.query<RowDataPacket[]>(
+            "SELECT uuid, name FROM player WHERE discord_id = ?",
+            [discordId]
+        );
+        if (discordExisting[0]) {
+            return res.status(409).send({ error: "Discord account already linked", player: discordExisting[0].name });
+        }
+
         const [rows] = await database.query<RowDataPacket[]>(
             "SELECT code, expiration, player_name FROM verification WHERE uuid = ?",
             [uuid]
@@ -336,7 +356,7 @@ server.post("/verify/check", express.json(), async (req, res) => {
 
         await database.query("DELETE FROM verification WHERE uuid = ?", [uuid]);
 
-        return res.send({ message: "Player verified successfully" });
+        return res.send({ message: "Player verified successfully", player_name: row.player_name });
     } catch (err) {
         console.error(err);
         return res.status(500).send({ error: "Internal server error" });
