@@ -3,6 +3,21 @@ import { type RowDataPacket, type Pool } from "mysql2/promise";
 import { isAdminToken } from "./utils.js";
 
 export function initTeamRoutes(server: Express, database: Pool) {
+    server.get("/teams", async (req, res) => {
+        const token = req.headers["authorization"];
+
+        if (!token) return res.status(401).send({ error: "No token provided" });
+        if (!(await isAdminToken(token, database))) return res.status(403).send({ error: "Unauthorized" });
+
+        try {
+            const [rows] = await database.query<RowDataPacket[]>("SELECT * FROM team");
+            res.send({ teams: rows });
+        } catch (err) {
+            console.error(err);
+            res.status(500).send({ error: "Internal server error" });
+        }
+    });
+    
     server.post("/teams", express.json(), async (req, res) => {
         const name = req.body.name;
         const tag = req.body.tag;
@@ -28,7 +43,7 @@ export function initTeamRoutes(server: Express, database: Pool) {
         }
     });
 
-    server.get("/team/:id", async (req, res) => {
+    server.get("/teams/:id", async (req, res) => {
         const id = parseInt(req.params.id);
         if (isNaN(id)) return res.status(400).send({ error: "Invalid team ID" });
         const token = req.headers["authorization"];
@@ -47,7 +62,7 @@ export function initTeamRoutes(server: Express, database: Pool) {
         }
     });
 
-    server.get("/team/:id/players", async (req, res) => {
+    server.get("/teams/:id/players", async (req, res) => {
         const id = parseInt(req.params.id);
         if (isNaN(id)) return res.status(400).send({ error: "Invalid team ID" });
         const token = req.headers["authorization"];

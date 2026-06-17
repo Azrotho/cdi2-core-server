@@ -3,7 +3,7 @@ import { type RowDataPacket, type Pool } from "mysql2/promise";
 import { getTokenOwner } from "./utils.js";
 
 export function initPlayerRoutes(server: Express, database: Pool) {
-    server.get("/player/discord/:discordId", async (req, res) => {
+    server.get("/players/discord/:discordId", async (req, res) => {
         const discordId = req.params.discordId;
         const token = req.headers["authorization"];
 
@@ -28,7 +28,7 @@ export function initPlayerRoutes(server: Express, database: Pool) {
         }
     });
 
-    server.get("/player/:uuid", async (req, res) => {
+    server.get("/players/:uuid", async (req, res) => {
         const uuid = req.params.uuid;
         const token = req.headers["authorization"];
 
@@ -53,7 +53,7 @@ export function initPlayerRoutes(server: Express, database: Pool) {
         }
     });
 
-    server.delete("/player/:uuid", async (req, res) => {
+    server.delete("/players/:uuid", async (req, res) => {
         const uuid = req.params.uuid;
         const token = req.headers["authorization"];
 
