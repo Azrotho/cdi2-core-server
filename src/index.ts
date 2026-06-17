@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 import express from "express";
 import mysql, { type RowDataPacket } from "mysql2/promise";
+import { getTokenOwner, isAdminToken, pass } from "./utils.js";
 
 dotenv.config({ quiet: true });
 
@@ -14,20 +15,6 @@ const database = mysql.createPool({
     database: process.env.DATABASE_NAME ?? "cdi2"
 });
 
-async function getTokenOwner(token: string): Promise<string | null> {
-    if (!token) return null;
-    try {
-        const [rows] = await database.query<RowDataPacket[]>("SELECT owner FROM token WHERE token = ?", [token]);
-        return rows[0]?.owner ?? null;
-    } catch {
-        return null;
-    }
-}
-
-async function isAdminToken(token: string): Promise<boolean> {
-    return (await getTokenOwner(token)) === "admin";
-}
-
 server.get("/ping", (req, res) => {
     res.send({ message: "pong!" });
 });
@@ -40,7 +27,7 @@ server.get("/test-token", async (req, res) => {
     const token = req.headers["authorization"];
     if (!token) return res.status(401).send({ error: "No token provided" });
 
-    const owner = await getTokenOwner(token);
+    const owner = await getTokenOwner(token, database);
     if (!owner) return res.status(401).send({ error: "Invalid token" });
 
     res.send({ message: "Token is valid", user: owner });
@@ -49,7 +36,7 @@ server.get("/test-token", async (req, res) => {
 server.post("/token", express.json(), async (req, res) => {
     const token = req.headers["authorization"];
     if (!token) return res.status(401).send({ error: "No token provided" });
-    if (!(await isAdminToken(token))) return res.status(403).send({ error: "Unauthorized" });
+    if (!(await isAdminToken(token, database))) return res.status(403).send({ error: "Unauthorized" });
 
     const owner = req.body.owner;
     if (!owner) return res.status(400).send({ error: "No owner provided" });
@@ -67,7 +54,7 @@ server.post("/token", express.json(), async (req, res) => {
 server.delete("/token", express.json(), async (req, res) => {
     const token = req.headers["authorization"];
     if (!token) return res.status(401).send({ error: "No token provided" });
-    if (!(await isAdminToken(token))) return res.status(403).send({ error: "Unauthorized" });
+    if (!(await isAdminToken(token, database))) return res.status(403).send({ error: "Unauthorized" });
 
     const tokenToDelete = req.body.token;
     if (!tokenToDelete) return res.status(400).send({ error: "No token provided to delete" });
@@ -81,84 +68,13 @@ server.delete("/token", express.json(), async (req, res) => {
     }
 });
 
-server.post("/teams", express.json(), async (req, res) => {
-    const name = req.body.name;
-    const tag = req.body.tag;
-    const color = req.body.color;
-    const leader = req.body.leader;
-    const token = req.headers["authorization"];
-
-    if (!token) return res.status(401).send({ error: "No token provided" });
-    if (!(await isAdminToken(token))) return res.status(403).send({ error: "Unauthorized" });
-    if (!name || !tag || !color || !leader) return res.status(400).send({ error: "Missing required fields" });
-
-    try {
-        await database.query("INSERT INTO team (name, tag, color, leader, staff) VALUES (?, ?, ?, ?, 0)", [
-            name,
-            tag,
-            color,
-            leader
-        ]);
-        res.send({ message: "Team created successfully" });
-    } catch (err) {
-        console.error(err);
-        res.status(500).send({ error: "Failed to create team" });
-    }
-});
-
-server.get("/team/:id", async (req, res) => {
-    const id = parseInt(req.params.id);
-    if(isNaN(id)) return res.status(400).send({ error: "Invalid team ID" });
-    const token = req.headers["authorization"];
-
-    if (!token) return res.status(401).send({ error: "No token provided" });
-    if (!(await isAdminToken(token))) return res.status(403).send({ error: "Unauthorized" });
-
-    try {
-        const [rows] = await database.query<RowDataPacket[]>("SELECT * FROM team WHERE id = ?", [id]);
-        const team = rows[0];
-        if (!team) return res.status(404).send({ error: "Team not found" });
-        res.send({ team });
-    } catch (err) {
-        console.error(err);
-        res.status(500).send({ error: "Internal server error" });
-    }
-});
-
-server.get("/team/:id/players", async (req, res) => {
-    const id = parseInt(req.params.id);
-    if(isNaN(id)) return res.status(400).send({ error: "Invalid team ID" });
-    const token = req.headers["authorization"];
-
-    if (!token) return res.status(401).send({ error: "No token provided" });
-    if (!(await isAdminToken(token))) return res.status(403).send({ error: "Unauthorized" });
-
-    try {
-        const [rows] = await database.query<RowDataPacket[]>("SELECT * FROM player WHERE team = ?", [id]);
-        res.send({ players: rows });
-    } catch (err) {
-        console.error(err);
-        res.status(500).send({ error: "Internal server error" });
-    }
-});
-
-function pass(length: number = 8): string {
-    const char = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_-+=";
-    let password = "";
-    for (let i = 0; i < length; i++) {
-        const ind = Math.floor(Math.random() * char.length);
-        password += char[ind];
-    }
-    return password;
-}
-
 
 server.get("/player/discord/:discordId", async (req, res) => {
     const discordId = req.params.discordId;
     const token = req.headers["authorization"];
 
     if (!token) return res.status(401).send({ error: "No token provided" });
-    const owner = await getTokenOwner(token);
+    const owner = await getTokenOwner(token, database);
     if (!owner) return res.status(401).send({ error: "Invalid token" });
     if(owner !== "admin" && owner !== discordId) return res.status(403).send({ error: "Unauthorized" });
 
@@ -180,7 +96,7 @@ server.get("/player/:uuid", async (req, res) => {
     const token = req.headers["authorization"];
 
     if (!token) return res.status(401).send({ error: "No token provided" });
-    const owner = await getTokenOwner(token);
+    const owner = await getTokenOwner(token, database);
     if (!owner) return res.status(401).send({ error: "Invalid token" });
     if(owner !== "admin" && owner !== uuid) return res.status(403).send({ error: "Unauthorized" });
     
@@ -202,7 +118,7 @@ server.delete("/player/:uuid", async (req, res) => {
     const token = req.headers["authorization"];
 
     if (!token) return res.status(401).send({ error: "No token provided" });
-    const owner = await getTokenOwner(token);
+    const owner = await getTokenOwner(token, database);
     if (!owner) return res.status(401).send({ error: "Invalid token" });
     if(owner !== "admin") return res.status(403).send({ error: "Unauthorized" });
 
@@ -219,7 +135,7 @@ server.get("/players", async (req, res) => {
     const token = req.headers["authorization"];
 
     if (!token) return res.status(401).send({ error: "No token provided" });
-    const owner = await getTokenOwner(token);
+    const owner = await getTokenOwner(token, database);
     if (!owner) return res.status(401).send({ error: "Invalid token" });
     if(owner !== "admin") return res.status(403).send({ error: "Unauthorized" });
 
@@ -243,7 +159,7 @@ server.post("/verify", express.json(), async (req, res) => {
     const playerName = req.body?.player_name;
     if (!uuid || !playerName) return res.status(400).send({ error: "No uuid or player_name provided" });
 
-    const owner = await getTokenOwner(token);
+    const owner = await getTokenOwner(token, database);
     if (!owner) return res.status(401).send({ error: "Invalid token" });
 
     if (owner === "admin") {
@@ -293,7 +209,7 @@ server.post("/verify/check", express.json(), async (req, res) => {
     const token = req.headers["authorization"];
 
     if (!token) return res.status(400).send({ error: "No token provided" });
-    const owner = await getTokenOwner(token);
+    const owner = await getTokenOwner(token, database);
     if (!owner) return res.status(401).send({ error: "Invalid token" });
     if(owner !== "admin") return res.status(403).send({ error: "Unauthorized" });
 
@@ -361,7 +277,7 @@ server.post("/verify/check", express.json(), async (req, res) => {
         console.error(err);
         return res.status(500).send({ error: "Internal server error" });
     }
-})
+});
 
 
 
