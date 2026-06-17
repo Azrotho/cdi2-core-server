@@ -2,6 +2,8 @@ import dotenv from "dotenv";
 import express from "express";
 import mysql, { type RowDataPacket } from "mysql2/promise";
 import { getTokenOwner, isAdminToken, pass } from "./utils.js";
+import { initTeamRoutes } from "./team.js";
+import { initPlayerRoutes } from "./player.js";
 
 dotenv.config({ quiet: true });
 
@@ -14,6 +16,9 @@ const database = mysql.createPool({
     password: process.env.DATABASE_PASSWORD ?? "",
     database: process.env.DATABASE_NAME ?? "cdi2"
 });
+
+initTeamRoutes(server, database);
+initPlayerRoutes(server, database);
 
 server.get("/ping", (req, res) => {
     res.send({ message: "pong!" });

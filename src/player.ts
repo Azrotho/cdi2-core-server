@@ -1,8 +1,8 @@
-import express, { type Express } from "express";
+import { type Express } from "express";
 import { type RowDataPacket, type Pool } from "mysql2/promise";
-import { getTokenOwner, isAdminToken } from "./utils.js";
+import { getTokenOwner } from "./utils.js";
 
-function initPlayerRoutes(server: Express, database: Pool) {
+export function initPlayerRoutes(server: Express, database: Pool) {
     server.get("/player/discord/:discordId", async (req, res) => {
         const discordId = req.params.discordId;
         const token = req.headers["authorization"];

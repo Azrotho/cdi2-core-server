@@ -2,7 +2,7 @@ import express, { type Express } from "express";
 import { type RowDataPacket, type Pool } from "mysql2/promise";
 import { isAdminToken } from "./utils.js";
 
-function initTeamRoute(server: Express, database: Pool) {
+export function initTeamRoutes(server: Express, database: Pool) {
     server.post("/teams", express.json(), async (req, res) => {
         const name = req.body.name;
         const tag = req.body.tag;
