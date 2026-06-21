@@ -20,7 +20,7 @@ export function initTeamRoutes(server: Express, database: Pool) {
     
     server.post("/teams", express.json(), async (req, res) => {
         const name = req.body.name;
-        const tag = req.body.tag;
+        const tag = req.body.tag ? String(req.body.tag).toUpperCase() : undefined;
         const color = req.body.color;
         const leader = req.body.leader;
         const token = req.headers["authorization"];
@@ -170,7 +170,7 @@ export function initTeamRoutes(server: Express, database: Pool) {
 
     server.post("/teams/:id/tag", express.json(), async (req, res) => {
         const id = parseInt(req.params.id);
-        const tag = req.body.tag;
+        const tag = req.body.tag ? String(req.body.tag).toUpperCase() : undefined;
         if (isNaN(id)) return res.status(400).send({ error: "Invalid team ID" });
         if (!tag) return res.status(400).send({ error: "Missing tag field" });
         const token = req.headers["authorization"];
