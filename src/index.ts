@@ -5,6 +5,7 @@ import { initTeamRoutes } from "./team.js";
 import { initPlayerRoutes } from "./player.js";
 import { initVerificationRoutes } from "./verification.js";
 import { initTokenRoutes } from "./token.js";
+import { initTransactionRoutes } from "./transaction.js";
 
 dotenv.config({ quiet: true });
 
@@ -22,6 +23,7 @@ initTeamRoutes(server, database);
 initPlayerRoutes(server, database);
 initVerificationRoutes(server, database);
 initTokenRoutes(server, database);
+initTransactionRoutes(server, database);
 
 server.get("/ping", (req, res) => {
     res.send({ message: "pong!" });

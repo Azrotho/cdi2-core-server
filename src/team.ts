@@ -1,6 +1,6 @@
 import express, { type Express } from "express";
 import { type RowDataPacket, type Pool } from "mysql2/promise";
-import { isAdminToken } from "./utils.js";
+import { isAdminToken, getTokenOwner } from "./utils.js";
 
 export function initTeamRoutes(server: Express, database: Pool) {
     server.get("/teams", async (req, res) => {
@@ -76,6 +76,44 @@ export function initTeamRoutes(server: Express, database: Pool) {
         } catch (err) {
             console.error(err);
             res.status(500).send({ error: "Internal server error" });
+        }
+    });
+
+    server.delete("/teams/:id", async (req, res) => {
+        const id = parseInt(req.params.id);
+        if (isNaN(id)) return res.status(400).send({ error: "Invalid team ID" });
+        const token = req.headers["authorization"];
+
+        if (!token) return res.status(401).send({ error: "No token provided" });
+        if (!(await isAdminToken(token, database))) return res.status(403).send({ error: "Unauthorized" });
+
+        try {
+            await database.query("DELETE FROM team WHERE id = ?", [id]);
+            res.send({ message: "Team deleted successfully" });
+        } catch (err) {
+            console.error(err);
+            res.status(500).send({ error: "Failed to delete team" });
+        }
+    });
+
+    server.get("/team/:team_id/money", async (req, res) => {
+        const team_id = req.params.team_id;
+        const token = req.headers["authorization"];
+        if (!token) return res.status(401).send({ error: "No token provided" });
+        const owner = await getTokenOwner(token, database);
+        if (!owner) return res.status(401).send({ error: "Invalid token" });
+        if (owner !== "admin") return res.status(403).send({ error: "Unauthorized" });
+
+        try {
+            const [rows] = await database.query<RowDataPacket[]>(
+                "SELECT SUM(total_value) as total_money FROM transaction WHERE team_id = ?",
+                [team_id]
+            );
+            const total_money = rows[0]?.total_money || 0;
+            res.send({ total_money });
+        } catch (err) {
+            console.error(err);
+            res.status(500).send({ error: "Failed to retrieve total money" });
         }
     });
 }
