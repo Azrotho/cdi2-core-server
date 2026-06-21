@@ -53,7 +53,7 @@ export function initPlayerRoutes(server: Express, database: Pool) {
         }
     });
 
-    server.post("/players/:uuid/team", async (req, res) => {
+    server.post("/players/:uuid/team", express.json(), async (req, res) => {
         const uuid = req.params.uuid;
         const { team } = req.body;
         const token = req.headers["authorization"];
@@ -72,7 +72,7 @@ export function initPlayerRoutes(server: Express, database: Pool) {
         }
     });
 
-    server.post("/players/:uuid/name", async (req, res) => {
+    server.post("/players/:uuid/name", express.json(), async (req, res) => {
         const uuid = req.params.uuid;
         const { name } = req.body;
         const token = req.headers["authorization"];
