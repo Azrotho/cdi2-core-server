@@ -18,8 +18,8 @@ export function initTransactionRoutes(server: Express, database: Pool) {
 
         try {
             await database.query(
-                "INSERT INTO transaction (team_id, member_uuid, total_value, reason, quantity) VALUES (?, ?, ?, ?, ?)",
-                [team_id, member_uuid, total_value, reason, quantity]
+                "INSERT INTO transaction (team_id, member_uuid, total_value, reason, quantity, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
+                [team_id, member_uuid, total_value, reason, quantity, Date.now()]
             );
             res.send({ message: "Transaction created successfully" });
         } catch (err) {

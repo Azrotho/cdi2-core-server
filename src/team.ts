@@ -1,5 +1,5 @@
 import express, { type Express } from "express";
-import { type RowDataPacket, type Pool } from "mysql2/promise";
+import { type RowDataPacket, type ResultSetHeader, type Pool } from "mysql2/promise";
 import { isAdminToken, getTokenOwner } from "./utils.js";
 
 export function initTeamRoutes(server: Express, database: Pool) {
@@ -41,13 +41,13 @@ export function initTeamRoutes(server: Express, database: Pool) {
         }
 
         try {
-            await database.query("INSERT INTO team (name, tag, color, leader, staff) VALUES (?, ?, ?, ?, 0)", [
+            const [result] = await database.query<ResultSetHeader>("INSERT INTO team (name, tag, color, leader, staff) VALUES (?, ?, ?, ?, 0)", [
                 name,
                 tag,
                 color,
                 leader
             ]);
-            res.send({ message: "Team created successfully" });
+            res.send({ message: "Team created successfully", id: result.insertId });
         } catch (err) {
             console.error(err);
             res.status(500).send({ error: "Failed to create team" });
