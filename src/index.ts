@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
 import express from "express";
-import mysql, { type RowDataPacket } from "mysql2/promise";
+import mysql from "mysql2/promise";
 import { initTeamRoutes } from "./team.js";
 import { initPlayerRoutes } from "./player.js";
 import { initVerificationRoutes } from "./verification.js";
