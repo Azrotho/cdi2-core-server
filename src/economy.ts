@@ -1,4 +1,6 @@
 import { type Pool, type RowDataPacket } from "mysql2/promise";
+import { type Express } from "express";
+import { isAdminToken } from "./utils.js";
 
 export function initEconomy(database: Pool) {
     let lastHour = new Date().getHours();
@@ -54,4 +56,80 @@ export function initEconomy(database: Pool) {
             }
         }
     }, 1000);
+}
+
+export function initEconomyRoutes(server: Express, database: Pool) {
+    server.get("/economy/items", async (req, res) => {
+        const token = req.headers["authorization"];
+        if(!token) return res.status(401).send({ error: "No token provided" });
+        if(!await isAdminToken(token, database)) return res.status(403).send({ error: "Unauthorized" });
+        try {
+            const [items] = await database.query<RowDataPacket[]>(
+                "SELECT material, name, current_price FROM item ORDER BY name"
+            );
+            res.send({ items });
+        } catch (err) {
+            console.error(err);
+            res.status(500).send({ error: "Internal server error" });
+        }
+    });
+
+    server.get("/economy/items/:material", async (req, res) => {
+        const material = req.params.material;
+        const token = req.headers["authorization"];
+        if(!token) return res.status(401).send({ error: "No token provided" });
+        if(!await isAdminToken(token, database)) return res.status(403).send({ error: "Unauthorized" });
+        try {
+            const [rows] = await database.query<RowDataPacket[]>(
+                "SELECT material, name, current_price FROM item WHERE material = ?",
+                [material]
+            );
+            const item = rows[0];
+            if (!item) {
+                return res.status(404).send({ error: "Item not found" });
+            }
+            res.send({ item });
+        } catch (err) {
+            console.error(err);
+            res.status(500).send({ error: "Internal server error" });
+        }
+    });
+
+    server.get("/economy/npcs/:npcId", async (req, res) => {
+        const npcId = req.params.npcId;
+        const token = req.headers["authorization"];
+        if(!token) return res.status(401).send({ error: "No token provided" });
+        if(!await isAdminToken(token, database)) return res.status(403).send({ error: "Unauthorized" });
+        if(!npcId) {
+            return res.status(400).send({ error: "NPC ID is required" });
+        }
+        try {
+            const [rows] = await database.query<RowDataPacket[]>(
+                "SELECT npc, material, release_day FROM item WHERE npc = ?",
+                [npcId]
+            );
+            const npc = rows[0];
+            if (!npc) {
+                return res.status(404).send({ error: "NPC not found" });
+            }
+            res.send({ npc });
+        } catch (err) {
+            console.error(err);
+            res.status(500).send({ error: "Internal server error" });
+        }
+    });
+    server.get("/economy/npcs", async (req, res) => {
+        const token = req.headers["authorization"];
+        if(!token) return res.status(401).send({ error: "No token provided" });
+        if(!await isAdminToken(token, database)) return res.status(403).send({ error: "Unauthorized" });
+        try {
+            const [npcs] = await database.query<RowDataPacket[]>(
+                "SELECT DISTINCT npc, release_day FROM item"
+            );
+            res.send({ npcs });
+        } catch (err) {
+            console.error(err);
+            res.status(500).send({ error: "Internal server error" });
+        }
+    });
 }

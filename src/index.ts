@@ -6,6 +6,7 @@ import { initPlayerRoutes } from "./player.js";
 import { initVerificationRoutes } from "./verification.js";
 import { initTokenRoutes } from "./token.js";
 import { initTransactionRoutes } from "./transaction.js";
+import { initEconomyRoutes, initEconomy } from "./economy.js";
 
 dotenv.config({ quiet: true });
 
@@ -18,12 +19,13 @@ const database = mysql.createPool({
     password: process.env.DATABASE_PASSWORD ?? "",
     database: process.env.DATABASE_NAME ?? "cdi2"
 });
-
+initEconomy(database);
 initTeamRoutes(server, database);
 initPlayerRoutes(server, database);
 initVerificationRoutes(server, database);
 initTokenRoutes(server, database);
 initTransactionRoutes(server, database);
+initEconomyRoutes(server, database);
 
 server.get("/ping", (req, res) => {
     res.send({ message: "pong!" });
