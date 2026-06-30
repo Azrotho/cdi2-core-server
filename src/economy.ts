@@ -65,7 +65,7 @@ export function initEconomyRoutes(server: Express, database: Pool) {
         if(!await isAdminToken(token, database)) return res.status(403).send({ error: "Unauthorized" });
         try {
             const [items] = await database.query<RowDataPacket[]>(
-                "SELECT material, name, current_price FROM item ORDER BY name"
+                "SELECT material, price, max_decrease, max_increase, current_price FROM item ORDER BY material"
             );
             res.send({ items });
         } catch (err) {
@@ -81,7 +81,7 @@ export function initEconomyRoutes(server: Express, database: Pool) {
         if(!await isAdminToken(token, database)) return res.status(403).send({ error: "Unauthorized" });
         try {
             const [rows] = await database.query<RowDataPacket[]>(
-                "SELECT material, name, current_price FROM item WHERE material = ?",
+                "SELECT material, price, max_decrease, max_increase, current_price FROM item WHERE material = ?",
                 [material]
             );
             const item = rows[0];
@@ -108,10 +108,17 @@ export function initEconomyRoutes(server: Express, database: Pool) {
                 "SELECT npc, material, release_day FROM item WHERE npc = ?",
                 [npcId]
             );
-            const npc = rows[0];
-            if (!npc) {
+            if (rows.length === 0) {
                 return res.status(404).send({ error: "NPC not found" });
             }
+            const npc = {
+                npc: npcId,
+                release_day: rows[0]!.release_day,
+                items: rows.map((r: any) => ({
+                    material: r.material,
+                    release_day: r.release_day
+                }))
+            };
             res.send({ npc });
         } catch (err) {
             console.error(err);
