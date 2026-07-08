@@ -237,4 +237,21 @@ export function initTeamRoutes(server: Express, database: Pool) {
             res.status(500).send({ error: "Failed to retrieve total money" });
         }
     });
+
+    server.post("/team/:team_id/verify", express.json(), async (req, res) => {
+        const team_id = req.params.team_id;
+        const token = req.headers["authorization"];
+        if (!token) return res.status(401).send({ error: "No token provided" });
+        const owner = await getTokenOwner(token, database);
+        if (!owner) return res.status(401).send({ error: "Invalid token" });
+        if (owner !== "admin") return res.status(403).send({ error: "Unauthorized" });
+
+        try {
+            await database.query("UPDATE team SET verification = 1 WHERE id = ?", [team_id]);
+            res.send({ message: "Team verified successfully" });
+        } catch (err) {
+            console.error(err);
+            res.status(500).send({ error: "Failed to verify team" });
+        }
+    });
 }
