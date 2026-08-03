@@ -7,7 +7,7 @@ import { initVerificationRoutes } from "./verification.js";
 import { initTokenRoutes } from "./token.js";
 import { initTransactionRoutes } from "./transaction.js";
 import { initEconomyRoutes, initEconomy } from "./economy.js";
-import { initStatsRoutes } from "./stats.js";
+import { initDataRoutes } from "./data.js";
 
 dotenv.config({ quiet: true });
 
@@ -27,7 +27,7 @@ initVerificationRoutes(server, database);
 initTokenRoutes(server, database);
 initTransactionRoutes(server, database);
 initEconomyRoutes(server, database);
-initStatsRoutes(server, database);
+initDataRoutes(server, database);
 
 server.get("/ping", (req, res) => {
     res.send({ message: "pong!" });
