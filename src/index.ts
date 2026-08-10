@@ -8,6 +8,8 @@ import { initTokenRoutes } from "./token.js";
 import { initTransactionRoutes } from "./transaction.js";
 import { initEconomyRoutes, initEconomy } from "./economy.js";
 import { initDataRoutes } from "./data.js";
+import { initStatRoutes } from "./stat.js";
+import { initHeadRoutes } from "./head.js";
 
 dotenv.config({ quiet: true });
 
@@ -28,6 +30,8 @@ initTokenRoutes(server, database);
 initTransactionRoutes(server, database);
 initEconomyRoutes(server, database);
 initDataRoutes(server, database);
+initStatRoutes(server, database);
+initHeadRoutes(server, database);
 
 server.get("/ping", (req, res) => {
     res.send({ message: "pong!" });
