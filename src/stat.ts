@@ -6,7 +6,7 @@ export function initStatRoutes(app: Express, database: Pool) {
     // UUID (player UUID), stat (name of the stat), value (value of the stat), we must return stat value for the team (adding all player stat values for the team)
     app.get("/stat/:uuid/:stat", async (req, res) => {
         const { uuid, stat } = req.params;
-        const token = req.headers.authorization?.split(" ")[1] ?? "";
+        const token = req.headers.authorization ?? "";
         const owner = await getTokenOwner(token, database);
         if (!owner) {
             res.status(401).send({ message: "Unauthorized" });
@@ -28,14 +28,17 @@ export function initStatRoutes(app: Express, database: Pool) {
 
     app.get("/stat/team/:team/:stat", async (req, res) => {
         const { team, stat } = req.params;
-        const token = req.headers.authorization?.split(" ")[1] ?? "";
+        const token = req.headers.authorization ?? "";
         const owner = await getTokenOwner(token, database);
         if (!owner) {
             res.status(401).send({ message: "Unauthorized" });
             return;
         }
         try {
-            const [rows] = await database.query<RowDataPacket[]>(`SELECT SUM(value) as total FROM stat WHERE team = ? AND stat = ?`, [team, stat]);
+            const [rows] = await database.query<RowDataPacket[]>(
+                `SELECT SUM(s.value) as total FROM stat s JOIN player p ON p.uuid = s.uuid WHERE p.team = ? AND s.stat = ?`,
+                [team, stat]
+            );
             const row = rows[0];
             if (!row) {
                 res.status(404).send({ message: "Stat not found" });
@@ -51,7 +54,7 @@ export function initStatRoutes(app: Express, database: Pool) {
     app.post("/stat/add/:uuid/:stat", async (req, res) => {
         const { uuid, stat } = req.params;
         const { value } = req.body;
-        const token = req.headers.authorization?.split(" ")[1] ?? "";
+        const token = req.headers.authorization ?? "";
         const owner = await getTokenOwner(token, database);
         if (!owner) {
             res.status(401).send({ message: "Unauthorized" });
@@ -69,7 +72,7 @@ export function initStatRoutes(app: Express, database: Pool) {
     app.post("/stat/set/:uuid/:stat", async (req, res) => {
         const { uuid, stat } = req.params;
         const { value } = req.body;
-        const token = req.headers.authorization?.split(" ")[1] ?? "";
+        const token = req.headers.authorization ?? "";
         const owner = await getTokenOwner(token, database);
         if (!owner) {
             res.status(401).send({ message: "Unauthorized" });
@@ -86,7 +89,7 @@ export function initStatRoutes(app: Express, database: Pool) {
 
     app.delete("/stat/:uuid/:stat", async (req, res) => {
         const { uuid, stat } = req.params;
-        const token = req.headers.authorization?.split(" ")[1] ?? "";
+        const token = req.headers.authorization ?? "";
         const owner = await getTokenOwner(token, database);
         if (!owner) {
             res.status(401).send({ message: "Unauthorized" });
