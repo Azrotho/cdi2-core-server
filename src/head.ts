@@ -29,7 +29,10 @@ export function initHeadRoutes(server: Express, database: Pool) {
             );
 
             res.send({ message: "Head added successfully", id: result.insertId });
-        } catch (err) {
+        } catch (err: any) {
+            if (err?.code === "ER_DUP_ENTRY" || err?.errno === 1062) {
+                return res.status(409).send({ error: "Head already found by this team", alreadyFound: true });
+            }
             console.error("Erreur lors de l'enregistrement de la tête:", err);
             res.status(500).send({ error: "Failed to add head" });
         }
