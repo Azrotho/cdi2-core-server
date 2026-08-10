@@ -2,7 +2,7 @@ import { type Express } from "express";
 import { type Pool, type RowDataPacket } from "mysql2/promise";
 import { getTokenOwner } from "./utils.js";
 
-function initStatRoutes(app: Express, database: Pool) {
+export function initStatRoutes(app: Express, database: Pool) {
     // UUID (player UUID), stat (name of the stat), value (value of the stat), we must return stat value for the team (adding all player stat values for the team)
     app.get("/stat/:uuid/:stat", async (req, res) => {
         const { uuid, stat } = req.params;
