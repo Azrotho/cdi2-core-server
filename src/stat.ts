@@ -1,4 +1,4 @@
-import { type Express } from "express";
+import express, { type Express } from "express";
 import { type Pool, type RowDataPacket } from "mysql2/promise";
 import { getTokenOwner } from "./utils.js";
 
@@ -51,7 +51,7 @@ export function initStatRoutes(app: Express, database: Pool) {
         }
     });
 
-    app.post("/stat/add/:uuid/:stat", async (req, res) => {
+    app.post("/stat/add/:uuid/:stat", express.json(), async (req, res) => {
         const { uuid, stat } = req.params;
         const { value } = req.body;
         const token = req.headers.authorization ?? "";
@@ -69,7 +69,7 @@ export function initStatRoutes(app: Express, database: Pool) {
         }
     });
 
-    app.post("/stat/set/:uuid/:stat", async (req, res) => {
+    app.post("/stat/set/:uuid/:stat", express.json(), async (req, res) => {
         const { uuid, stat } = req.params;
         const { value } = req.body;
         const token = req.headers.authorization ?? "";
